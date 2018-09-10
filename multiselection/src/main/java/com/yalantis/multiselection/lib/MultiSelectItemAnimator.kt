@@ -1,7 +1,3 @@
-package com.yalantis.multiselection.lib
-
-
-import android.support.v4.animation.AnimatorCompatHelper
 import android.support.v4.view.ViewCompat
 import android.support.v4.view.ViewPropertyAnimatorListener
 import android.support.v7.widget.RecyclerView
@@ -11,7 +7,7 @@ import android.util.Log
 import android.view.View
 import java.util.*
 
-/**
+/**new mob
  * This implementation of [RecyclerView.ItemAnimator] provides basic
  * animations on remove, add, and move events that happen to the items in
  * a RecyclerView. RecyclerView uses a DefaultItemAnimator by default.
@@ -87,7 +83,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
             }
             if (removalsPending) {
                 val view = moves[0].holder.itemView
-                ViewCompat.postOnAnimationDelayed(view, mover, getRemoveDuration())
+                ViewCompat.postOnAnimationDelayed(view, mover, removeDuration)
             } else {
                 mover.run()
             }
@@ -107,7 +103,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
             }
             if (removalsPending) {
                 val holder = changes[0].oldHolder
-                ViewCompat.postOnAnimationDelayed(holder!!.itemView, changer, getRemoveDuration())
+                ViewCompat.postOnAnimationDelayed(holder!!.itemView, changer, removeDuration)
             } else {
                 changer.run()
             }
@@ -126,9 +122,9 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
                 mAdditionsList.remove(additions)
             }
             if (removalsPending || movesPending || changesPending) {
-                val removeDuration = (if (removalsPending) getRemoveDuration() else 0).toLong()
-                val moveDuration = (if (movesPending) getMoveDuration() else 0).toLong()
-                val changeDuration = (if (changesPending) getChangeDuration() else 0).toLong()
+                val removeDuration = (if (removalsPending) removeDuration else 0).toLong()
+                val moveDuration = (if (movesPending) moveDuration else 0).toLong()
+                val changeDuration = (if (changesPending) changeDuration else 0).toLong()
                 val totalDelay = removeDuration + Math.max(moveDuration, changeDuration)
                 val view = additions[0].itemView
                 ViewCompat.postOnAnimationDelayed(view, adder, totalDelay)
@@ -148,14 +144,14 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
         val view = holder.itemView
         val animation = ViewCompat.animate(view)
         mRemoveAnimations.add(holder)
-        animation.setDuration(getRemoveDuration()).alpha(0f).setListener(object : VpaListenerAdapter() {
+        animation.setDuration(removeDuration).alpha(0f).setListener(object : VpaListenerAdapter() {
             override fun onAnimationStart(view: View) {
                 dispatchRemoveStarting(holder)
             }
 
             override fun onAnimationEnd(view: View) {
                 animation.setListener(null)
-                ViewCompat.setAlpha(view, 1f)
+                view.alpha = 1f
                 dispatchRemoveFinished(holder)
                 mRemoveAnimations.remove(holder)
                 dispatchFinishedWhenDone()
@@ -166,7 +162,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
     override fun animateAdd(holder: ViewHolder): Boolean {
         Log.d(">>>", holder.toString())
         resetAnimation(holder)
-        ViewCompat.setAlpha(holder.itemView, 0f)
+        holder.itemView.alpha = 0f
         mPendingAdditions.add(holder)
         return true
     }
@@ -181,7 +177,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
             }
 
             override fun onAnimationCancel(view: View) {
-                ViewCompat.setAlpha(view, 1f)
+                view.alpha = 1f
             }
 
             override fun onAnimationEnd(view: View) {
@@ -197,25 +193,27 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
 
     override fun animateMove(holder: ViewHolder, fromX: Int, fromY: Int,
                              toX: Int, toY: Int): Boolean {
-        var fromX = fromX
-        var fromY = fromY
+        var mfromX = fromX
+        var mfromY = fromY
         val view = holder.itemView
-        fromX += ViewCompat.getTranslationX(holder.itemView).toInt()
-        fromY += ViewCompat.getTranslationY(holder.itemView).toInt()
+
+        mfromX += holder.itemView.translationX.toInt()
+        mfromY += holder.itemView.translationY.toInt()
+
         resetAnimation(holder)
-        val deltaX = toX - fromX
-        val deltaY = toY - fromY
+        val deltaX = toX - mfromX
+        val deltaY = toY - mfromY
         if (deltaX == 0 && deltaY == 0) {
             dispatchMoveFinished(holder)
             return false
         }
         if (deltaX != 0) {
-            ViewCompat.setTranslationX(view, (-deltaX).toFloat())
+            view.translationX = (-deltaX).toFloat()
         }
         if (deltaY != 0) {
-            ViewCompat.setTranslationY(view, (-deltaY).toFloat())
+            view.translationY = (-deltaY).toFloat()
         }
-        mPendingMoves += MoveInfo(holder, fromX, fromY, toX, toY)
+        mPendingMoves += MoveInfo(holder, mfromX, mfromY, toX, toY)
         return true
     }
 
@@ -234,17 +232,17 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
         // need listener functionality in VPACompat for this. Ick.
         val animation = ViewCompat.animate(view)
         mMoveAnimations.add(holder)
-        animation.setDuration(getMoveDuration()).setListener(object : VpaListenerAdapter() {
+        animation.setDuration(moveDuration).setListener(object : VpaListenerAdapter() {
             override fun onAnimationStart(view: View) {
                 dispatchMoveStarting(holder)
             }
 
             override fun onAnimationCancel(view: View) {
                 if (deltaX != 0) {
-                    ViewCompat.setTranslationX(view, 0f)
+                    view.translationX = 0f
                 }
                 if (deltaY != 0) {
-                    ViewCompat.setTranslationY(view, 0f)
+                    view.translationY = 0f
                 }
             }
 
@@ -266,22 +264,23 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
             // run a move animation to handle position changes.
             return animateMove(oldHolder, fromX, fromY, toX, toY)
         }
-        val prevTranslationX = ViewCompat.getTranslationX(oldHolder.itemView)
-        val prevTranslationY = ViewCompat.getTranslationY(oldHolder.itemView)
-        val prevAlpha = ViewCompat.getAlpha(oldHolder.itemView)
+
+        val prevTranslationX = oldHolder.itemView.translationX
+        val prevTranslationY = oldHolder.itemView.translationY
+        val prevAlpha = oldHolder.itemView.alpha
         resetAnimation(oldHolder)
         val deltaX = (toX.toFloat() - fromX.toFloat() - prevTranslationX).toInt()
         val deltaY = (toY.toFloat() - fromY.toFloat() - prevTranslationY).toInt()
         // recover prev translation state after ending animation
-        ViewCompat.setTranslationX(oldHolder.itemView, prevTranslationX)
-        ViewCompat.setTranslationY(oldHolder.itemView, prevTranslationY)
-        ViewCompat.setAlpha(oldHolder.itemView, prevAlpha)
+        oldHolder.itemView.translationX = prevTranslationX
+        oldHolder.itemView.translationY = prevTranslationY
+        oldHolder.itemView.alpha = prevAlpha
         if (newHolder != null) {
             // carry over translation values
             resetAnimation(newHolder)
-            ViewCompat.setTranslationX(newHolder.itemView, (-deltaX).toFloat())
-            ViewCompat.setTranslationY(newHolder.itemView, (-deltaY).toFloat())
-            ViewCompat.setAlpha(newHolder.itemView, 0f)
+            newHolder.itemView.translationX = (-deltaX).toFloat()
+            newHolder.itemView.translationY = (-deltaY).toFloat()
+            newHolder.itemView.alpha = 0f
         }
         mPendingChanges += ChangeInfo(oldHolder, newHolder, fromX, fromY, toX, toY)
         return true
@@ -305,9 +304,9 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
 
                 override fun onAnimationEnd(view: View) {
                     oldViewAnim.setListener(null)
-                    ViewCompat.setAlpha(view, 1f)
-                    ViewCompat.setTranslationX(view, 0f)
-                    ViewCompat.setTranslationY(view, 0f)
+                    view.alpha = 1f
+                    view.translationX =  0f
+                    view.translationY = 0f
                     dispatchChangeFinished(changeInfo.oldHolder, true)
                     mChangeAnimations.remove(changeInfo.oldHolder!!)
                     dispatchFinishedWhenDone()
@@ -317,16 +316,17 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
         if (newView != null) {
             val newViewAnimation = ViewCompat.animate(newView)
             mChangeAnimations.add(changeInfo.newHolder!!)
-            newViewAnimation.translationX(0f).translationY(0f).setDuration(getChangeDuration()).alpha(1f).setListener(object : VpaListenerAdapter() {
+            newViewAnimation.translationX(0f).translationY(0f).setDuration(changeDuration).alpha(1f).setListener(object : VpaListenerAdapter() {
                 override fun onAnimationStart(view: View) {
                     dispatchChangeStarting(changeInfo.newHolder, false)
                 }
 
                 override fun onAnimationEnd(view: View) {
                     newViewAnimation.setListener(null)
-                    ViewCompat.setAlpha(newView, 1f)
-                    ViewCompat.setTranslationX(newView, 0f)
-                    ViewCompat.setTranslationY(newView, 0f)
+
+                    newView.alpha =  1f
+                    newView.translationX = 0f
+                    newView.translationY = 0f
                     dispatchChangeFinished(changeInfo.newHolder, false)
                     mChangeAnimations.remove(changeInfo.newHolder!!)
                     dispatchFinishedWhenDone()
@@ -357,17 +357,17 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
 
     private fun endChangeAnimationIfNecessary(changeInfo: ChangeInfo, item: ViewHolder): Boolean {
         var oldItem = false
-        if (changeInfo.newHolder === item) {
-            changeInfo.newHolder = null
-        } else if (changeInfo.oldHolder === item) {
-            changeInfo.oldHolder = null
-            oldItem = true
-        } else {
-            return false
+        when {
+            changeInfo.newHolder === item -> changeInfo.newHolder = null
+            changeInfo.oldHolder === item -> {
+                changeInfo.oldHolder = null
+                oldItem = true
+            }
+            else -> return false
         }
-        ViewCompat.setAlpha(item.itemView, 1f)
-        ViewCompat.setTranslationX(item.itemView, 0f)
-        ViewCompat.setTranslationY(item.itemView, 0f)
+        item.itemView.alpha =  1f
+        item.itemView.translationX =  0f
+        item.itemView.translationY =  0f
         dispatchChangeFinished(item, oldItem)
         return true
     }
@@ -380,19 +380,19 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
         for (i in mPendingMoves.indices.reversed()) {
             val moveInfo = mPendingMoves[i]
             if (moveInfo.holder === item) {
-                ViewCompat.setTranslationY(view, 0f)
-                ViewCompat.setTranslationX(view, 0f)
+                view.translationY = 0f
+                view.translationX =  0f
                 dispatchMoveFinished(item)
                 mPendingMoves.removeAt(i)
             }
         }
         endChangeAnimation(mPendingChanges, item)
         if (mPendingRemovals.remove(item)) {
-            ViewCompat.setAlpha(view, 1f)
+            view.alpha =  1f
             dispatchRemoveFinished(item)
         }
         if (mPendingAdditions.remove(item)) {
-            ViewCompat.setAlpha(view, 1f)
+            view.alpha =  1f
             dispatchAddFinished(item)
         }
 
@@ -408,8 +408,8 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
             for (j in moves.indices.reversed()) {
                 val moveInfo = moves[j]
                 if (moveInfo.holder === item) {
-                    ViewCompat.setTranslationY(view, 0f)
-                    ViewCompat.setTranslationX(view, 0f)
+                    view.translationY =  0f
+                    view.translationX =  0f
                     dispatchMoveFinished(item)
                     moves.removeAt(j)
                     if (moves.isEmpty()) {
@@ -422,7 +422,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
         for (i in mAdditionsList.indices.reversed()) {
             val additions = mAdditionsList[i]
             if (additions.remove(item)) {
-                ViewCompat.setAlpha(view, 1f)
+                view.alpha =  1f
                 dispatchAddFinished(item)
                 if (additions.isEmpty()) {
                     mAdditionsList.removeAt(i)
@@ -454,8 +454,17 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
     }
 
     private fun resetAnimation(holder: ViewHolder) {
-        AnimatorCompatHelper.clearInterpolator(holder.itemView)
+        clearInterpolator(holder.itemView)
         endAnimation(holder)
+    }
+
+    private fun clearInterpolator(v: View) {
+        v.alpha = 1.0f
+        v.scaleY = 1.0f
+        v.scaleX = 1.0f
+        v.translationY =  0.0f
+        v.translationX = 0.0f
+        ViewCompat.animate(v).interpolator = null
     }
 
 
@@ -475,8 +484,8 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
         for (i in count - 1 downTo 0) {
             val item = mPendingMoves[i]
             val view = item.holder.itemView
-            ViewCompat.setTranslationY(view, 0f)
-            ViewCompat.setTranslationX(view, 0f)
+            view.translationY =  0f
+            view.translationX = 0f
             dispatchMoveFinished(item.holder)
             mPendingMoves.removeAt(i)
         }
@@ -490,7 +499,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
         for (i in count - 1 downTo 0) {
             val item = mPendingAdditions[i]
             val view = item.itemView
-            ViewCompat.setAlpha(view, 1f)
+            view.alpha =  1f
             dispatchAddFinished(item)
             mPendingAdditions.removeAt(i)
         }
@@ -511,8 +520,8 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
                 val moveInfo = moves[j]
                 val item = moveInfo.holder
                 val view = item.itemView
-                ViewCompat.setTranslationY(view, 0f)
-                ViewCompat.setTranslationX(view, 0f)
+                view.translationY =  0f
+                view.translationX =  0f
                 dispatchMoveFinished(moveInfo.holder)
                 moves.removeAt(j)
                 if (moves.isEmpty()) {
@@ -527,7 +536,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
             for (j in count - 1 downTo 0) {
                 val item = additions[j]
                 val view = item.itemView
-                ViewCompat.setAlpha(view, 1f)
+                view.alpha =  1f
                 dispatchAddFinished(item)
                 additions.removeAt(j)
                 if (additions.isEmpty()) {
@@ -555,7 +564,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
         dispatchAnimationsFinished()
     }
 
-    internal fun cancelAll(viewHolders: List<ViewHolder>) {
+    private fun cancelAll(viewHolders: List<ViewHolder>) {
         for (i in viewHolders.indices.reversed()) {
             ViewCompat.animate(viewHolders[i].itemView).cancel()
         }
@@ -579,7 +588,7 @@ class MultiSelectItemAnimator : SimpleItemAnimator() {
      *
      */
     override fun canReuseUpdatedViewHolder(viewHolder: ViewHolder,
-                                  payloads: List<Any>): Boolean {
+                                           payloads: List<Any>): Boolean {
         return !payloads.isEmpty() || super.canReuseUpdatedViewHolder(viewHolder, payloads)
     }
 
